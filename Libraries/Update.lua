@@ -86,7 +86,7 @@ end
 local function backtrack(lcs, dataA, dataB, i, j, result)
     if i > 0 and j > 0 and dataA[i] == dataB[j] then
         backtrack(lcs, dataA, dataB, i-1, j-1, result)
-        table.insert(result, {type="context", text=dataA[i]})
+        --table.insert(result, {type="context", text=dataA[i]})
     elseif j > 0 and (i == 0 or lcs[i][j-1] >= lcs[i-1][j]) then
         backtrack(lcs, dataA, dataB, i, j-1, result)
         table.insert(result, {type="add", text=dataB[j]})
@@ -107,6 +107,8 @@ local function compareData(dataA, dataB)
     local difference = {}
     backtrack(lcs, linesA, linesB, #linesA, #linesB, difference)
 
+    if #difference == 0 or not next(difference) then return end
+
     print("--- a")
     print("+++ b")
 
@@ -114,7 +116,7 @@ local function compareData(dataA, dataB)
 
     for _, diff in ipairs(difference) do
         if diff.type == "context" then
-            --print(" " .. diff.text)
+            print(" " .. diff.text)
         elseif diff.type == "remove" then
             print("-" .. diff.text)
         elseif diff.type == "add" then

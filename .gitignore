@@ -2,3 +2,6 @@
 *.png
 *.jpeg
 *.pdn
+
+# Ignore CraftOS
+CraftOS-PC/

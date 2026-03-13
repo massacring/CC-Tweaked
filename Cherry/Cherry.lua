@@ -208,7 +208,10 @@ function LayoutManager:layout()
         element:measure()
     end
     -- Grow And Shrink Sizing
-    self.root:growAndShrinkChildElements()
+    --self.root:growAndShrinkChildElements()
+    local along = self:getSize("along")
+    local across = self:getSize("across")
+    self.root:arrange(along, across)
     -- Wrap Text
 
     -- Fit Re-Sizing

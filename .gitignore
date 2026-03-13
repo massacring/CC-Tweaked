@@ -1,0 +1,4 @@
+# Ignore image formats.
+*.png
+*.jpeg
+*.pdn

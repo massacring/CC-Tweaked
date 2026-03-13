@@ -456,8 +456,8 @@ function UIElement:growAndShrinkChildElements()
 end
 
 function UIElement:arrange(finalAlongSize, finalAcrossSize)
-    if finalAlongSize then self:setSize(finalAlongSize, "along") end
-    if finalAcrossSize then self:setSize(finalAcrossSize, "across") end
+    if finalAlongSize then self:setSize(finalAlongSize, "size", "along") end
+    if finalAcrossSize then self:setSize(finalAcrossSize, "size", "across") end
 
     local totalAlong = (self:getSize("along"))
     local padding = self:getPadding("along"):sum()

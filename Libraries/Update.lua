@@ -4,7 +4,8 @@ local GIT_API = "https://api.github.com/repos/massacring/CC-Tweaked/"
 --- @param subdirectory string
 --- @return table
 local function getDirectoryContents(subdirectory)
-    local response = http.get(GIT_API .. "contents/" .. subdirectory)
+    local url = GIT_API .. "contents/" .. subdirectory
+    local response = http.get(url)
     local files = textutils.unserializeJSON(response.readAll())
     response.close()
     return files

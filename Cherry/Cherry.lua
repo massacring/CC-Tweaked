@@ -209,8 +209,8 @@ function LayoutManager:layout()
     end
     -- Grow And Shrink Sizing
     --self.root:growAndShrinkChildElements()
-    local along = self:getSize("along")
-    local across = self:getSize("across")
+    local along = self.root:getSize("along")
+    local across = self.root:getSize("across")
     self.root:arrange(along, across)
     -- Wrap Text
 

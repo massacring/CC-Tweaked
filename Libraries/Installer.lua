@@ -14,7 +14,7 @@ local GIT_API = "https://api.github.com/repos/massacring/CC-Tweaked/"
 --- Uses the Git API to fetch the contents of the provided subdirectory.
 --- @param subdirectory string
 --- @return table
-local function getDirectoryContents(subdirectory)
+local function getContents(subdirectory)
     local url = GIT_API .. "contents/" .. subdirectory
     local response = http.get(url)
     local files = textutils.unserializeJSON(response.readAll())
@@ -74,10 +74,23 @@ local function updateScript(data)
     end
 end
 
+local function downloadScript(data)
+    if data.type == "file" then
+        print("Downloading " .. data.name)
+
+        local repo = http.get(data.download_url)
+        local script = repo.readAll()
+        local file = fs.open(data.name, "w")
+        file.write(script)
+        file.close()
+        repo.close()
+    end
+end
+
 --- Connects to my CC: Tweaked GitHub repo and updates all the files of the provided subdirectory.
 --- @param subdirectory string
 local function getGit(subdirectory)
-    local files = getDirectoryContents(subdirectory)
+    local files = getContents(subdirectory)
 
     for _, file in ipairs(files) do
         local status, err = pcall(updateScript, file)
@@ -101,7 +114,14 @@ local function install()
     end
 
     print("installing " .. arg[1])
-
+    local file = getContents(arg[1])
+    local status, err = pcall(downloadScript, file)
+    if not status then
+        print("Failed to download file: " .. (file.name or "N/A"))
+        print("Reason: " .. err)
+    else
+        print("Done!")
+    end
 end
 
 if arg[1] == "run" then

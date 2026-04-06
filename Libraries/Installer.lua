@@ -11,6 +11,38 @@
 
 local GIT_API = "https://api.github.com/repos/massacring/CC-Tweaked/"
 
+--- Returns a list of auto complete options based on the provided index, text and previous.
+--- Index is which argument is being auto completed.
+--- Text is the current text of the argument being auto completed.
+--- Previous is a list of the previous arguments.
+--- @param index number
+--- @param text string
+--- @param previous table
+--- @return table
+local function autoComplete(_, index, text, previous)
+    --- Returns the remainder of words that start with the provided text, based on the provided list of words.
+    --- @param words table
+    --- @return table
+    local function wordComplete(words)
+        local result = {}
+        for _, word in ipairs(words) do
+            if word:sub(1, #text) == text then
+                table.insert(result, word:sub(#text+1, #word))
+            end
+        end
+        return result
+    end
+
+    if index == 1 then
+        local options = {"run", "update"}
+        if text == "" then
+            return options
+        end
+        return wordComplete(options)
+    end
+    return {}
+end
+
 --- Uses the Git API to fetch the contents of the provided subdirectory.
 --- @param subdirectory string
 --- @return table
@@ -74,6 +106,35 @@ local function updateScript(data)
     end
 end
 
+--- Gets the auto complete function for the provided script.
+--- Returns nil if the script is invalid or does not support auto complete.
+--- @param script string
+--- @return function|nil
+local function getAutoComplete(script)
+    local autoCompleteFunction = ""
+    local inAutoComplete = false
+    for line in script:gmatch("([^".."\n".."]+)") do
+        if line:find("function autoComplete") then
+            inAutoComplete = true
+        end
+        if inAutoComplete then
+            autoCompleteFunction = autoCompleteFunction .. line .. "\n"
+        end
+        if line == "end" then
+            break
+        end
+    end
+
+    local fn, err = load(autoCompleteFunction)
+
+    if not fn then
+        print("Failed to load auto complete function: " .. (err or "N/A"))
+        return
+    end
+
+    return fn
+end
+
 local function downloadScript(data)
     if data.type == "file" then
         print("Downloading " .. data.name)
@@ -84,6 +145,10 @@ local function downloadScript(data)
         file.write(script)
         file.close()
         repo.close()
+        local autoCompleteFunction = getAutoComplete(script)
+        if autoCompleteFunction then
+            shell.setCompletionFunction(data.name, autoCompleteFunction)
+        end
     end
 end
 

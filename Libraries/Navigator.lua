@@ -162,10 +162,53 @@ function Navigator:new(turtle, direction, x, y, z)
     self:setDirection(direction)
 
     ::setup::
-    local left = turtle.getEquippedLeft()
-    local right = turtle.getEquippedRight()
+    local left = self:getEquipped("left")
+    local right = self:getEquipped("right")
 
     self.isMining = (left and left.name == "minecraft:diamond_pickaxe") or (right and right.name == "minecraft:diamond_pickaxe")
+end
+
+--- Returns a bool whether the turtle has an item equipped on the provided side.
+--- Also returns the item data if there is any.
+--- @param side string
+--- @return table|nil
+function Navigator:getEquipped(side)
+    side = side:lower()
+    if side == "left" then
+        if self.turtle.getEquippedLeft ~= nil then
+            return self.turtle.getEquippedLeft()
+        end
+        local slot = self:getFirstEmptySlot()
+        if slot == 0 then
+            return
+        end
+        self.turtle.select(slot)
+        self.turtle.equipLeft()
+        local equippedLeft = self.turtle.getItemDetail(slot)
+        self.turtle.equipLeft()
+        if equippedLeft == nil then
+            return
+        else
+            return equippedLeft
+        end
+    elseif side == "right" then
+        if self.turtle.getEquippedRight ~= nil then
+            return self.turtle.getEquippedRight()
+        end
+        local slot = self:getFirstEmptySlot()
+        if slot == 0 then
+            return
+        end
+        self.turtle.select(slot)
+        self.turtle.equipRight()
+        local equippedRight = self.turtle.getItemDetail(slot)
+        self.turtle.equipRight()
+        if equippedRight == nil then
+            return
+        else
+            return equippedRight
+        end
+    end
 end
 
 --- Returns a table containing keys of indexes and values of item data.
@@ -181,6 +224,20 @@ function Navigator:getInventory()
         end
     end
     return inventory
+end
+
+--- Finds the first index of an empty slot, or 0 if no match is found.
+--- Returns a number, or 0 and a string reason for failure.
+--- @return number
+--- @return string|nil
+function Navigator:getFirstEmptySlot()
+    local inventory = self:getInventory()
+    for i = 1, 16 do
+        if inventory[i] == nil then
+            return i
+        end
+    end
+    return 0, "No empty slots found."
 end
 
 --- Finds the first index of the provided item id, or 0 if no match is found.
@@ -385,7 +442,7 @@ function Navigator:getOppositeDirection(direction)
 end
 
 --- Gets a stack of directions that the filter applies to.
---- Filter is a table containing a whitelist and blacklist of IDs, tags and mod types.
+--- Filter is a table containing a whitelist of IDs, tags and mod types.
 --- Also returns a string reason upon failure.
 --- @param filter table
 --- @return table
@@ -538,7 +595,7 @@ function Navigator:faceDirection(direction)
     return success, message
 end
 
---- Filter is a table containing a whitelist and blacklist of IDs, tags and mod types.
+--- Filter is a table containing a whitelist of IDs, tags and mod types.
 --- Data is a table containing a mod, name, and tags.
 --- @param filter table
 --- @param data table
@@ -551,44 +608,24 @@ function Navigator:filter(filter, data)
     local message
     for k, _ in pairs(filter) do
         if type(k) ~= "string" or (k ~= "id" and k ~= "tag" and k ~= "mod") then
-            print("Filter contains incorrect keys.")
+            return false, "Filter contains incorrect keys."
         end
     end
     if filter.id then
-        if filter.id.whitelist then
-            if not filter.id.whitelist[data.name] then
-                result = false
-                message = "Not in whitelist."
-                goto tag
-            end
-        end
-        if filter.id.blacklist then
-            if filter.id.blacklist[data.name] then
-                result = false
-                message = "Is in blacklist."
-                goto tag
-            end
+        if not filter.id[data.name] then
+            result = false
+            message = "Not in id whitelist."
+            goto tag
         end
         return true
     end
     ::tag::
     if filter.tag then
-        if filter.tag.whitelist then
-            for tag, _ in pairs(filter.tag.whitelist) do
-                if not data.tags[tag] then
-                    result = false
-                    message = "Not in whitelist."
-                    goto mod
-                end
-            end
-        end
-        if filter.tag.blacklist then
-            for tag, _ in pairs(filter.tag.blacklist) do
-                if data.tags[tag] then
-                    result = false
-                    message = "Is in blacklist."
-                    goto mod
-                end
+        for _, tag in pairs(filter.tag) do
+            if not data.tags[tag] then
+                result = false
+                message = "Not in tag whitelist."
+                goto mod
             end
         end
         return true
@@ -596,20 +633,14 @@ function Navigator:filter(filter, data)
     ::mod::
     if filter.mod then
         local mod = data.name:sub(1, data.name:find(":") - 1)
-        if filter.mod.whitelist then
-            if not filter.mod.whitelist[mod] then
-                result = false
-                message = "Not in whitelist."
-            end
-        end
-        if filter.mod.blacklist then
-            if filter.mod.blacklist[mod] then
-                result = false
-                message = "Is in blacklist."
-            end
+        if not filter.mod[mod] then
+            result = false
+            message = "Not in mod whitelist."
+            goto result
         end
         return true
     end
+    ::result::
     return result, message
 end
 
@@ -674,7 +705,7 @@ end
 
 --- Attempts to place in the provided direction.
 --- Direction must be 'up', 'forward', or 'down'.
---- Filter is a table containing a whitelist and blacklist of items IDs, item tags, and mod type.
+--- Filter is a table containing a whitelist of items IDs, item tags, and mod type.
 --- @param direction string
 --- @param slot number|nil
 --- @param text string|nil
@@ -707,7 +738,7 @@ end
 
 --- Attempts to break the block in the provided direction.
 --- Direction must be 'up', 'forward', or 'down'.
---- Filter is a table containing a whitelist and blacklist of block IDs, block tags, and mod type.
+--- Filter is a table containing a whitelist of block IDs, block tags, and mod type.
 --- @param direction string
 --- @param filter table|nil
 --- @return boolean
@@ -756,7 +787,7 @@ end
 
 -- Moves the Navigator in the provided direction.
 --- BreakBlock determines if it should break blocks as it moves or not.
---- Filter is a table containing a whitelist and blacklist of block IDs, block tags, and mod type.
+--- Filter is a table containing a whitelist of block IDs, block tags, and mod type.
 --- @param breakBlock boolean|nil
 --- @param filter table|nil
 --- @return boolean
@@ -808,7 +839,7 @@ end
 
 --- Computes several moves based on a list of instructions.
 --- BreakBlock determines if it should break blocks as it moves or not.
---- Filter is a table containing a whitelist and blacklist of block IDs, block tags, and mod type.
+--- Filter is a table containing a whitelist of block IDs, block tags, and mod type.
 --- @param instructions table
 --- @param breakBlock boolean|nil
 --- @param filter table|nil
@@ -867,7 +898,7 @@ function Navigator:compute(instructions, breakBlock, filter)
 end
 
 --- Mines all connected blocks in the direction.
---- Filter is a table containing a whitelist and blacklist of block IDs, block tags, and mod type.
+--- Filter is a table containing a whitelist of block IDs, block tags, and mod type.
 --- @param filter table
 --- @return boolean
 --- @return string|nil
@@ -1803,7 +1834,7 @@ local function getFilter(arguments)
         if arguments[type] then
             local values = {}
             for str in string.gmatch(arguments[type], "([^"..",".."]+)") do
-                table.insert(values, str)
+                values[str] = true
             end
             filter[type] = values
         end
@@ -1894,7 +1925,7 @@ local function setup(arguments)
     if arguments.f or arguments.filter then
         local types = getFilter(arguments)
         for type, values in pairs(types) do
-            filter[type]["whitelist"] = values
+            filter[type] = values
         end
     end
     local properties

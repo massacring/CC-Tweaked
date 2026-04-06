@@ -1314,7 +1314,7 @@ function Navigator:area(properties)
 
     local fuelRequired = (width * depth * 3 * slices) + (width * depth * leftoverSlice)
     if not self:checkFuel(fuelRequired) then
-        return false, "Not enough fuel."
+        return false, string.format("Not enough fuel: (%d/%d)", self.turtle.getFuelLevel(), fuelRequired)
     end
 
     -- if horizontalParity is odd and verticalParity is odd, we end at far width and far depth
@@ -1598,7 +1598,7 @@ function Navigator:staircase(properties)
         fuelRequired = fuelRequired + 2
     end
     if not self:checkFuel(fuelRequired) then
-        return false, "Not enough fuel."
+        return false, string.format("Not enough fuel: (%d/%d)", self.turtle.getFuelLevel(), fuelRequired)
     end
 
     do

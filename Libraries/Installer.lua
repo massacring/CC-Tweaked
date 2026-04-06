@@ -7,8 +7,7 @@ for _,v in pairs(arg) do
     counter = counter + 1
     if counter > 2 then
         table.insert(args, v)
+        print(textutils.serialize(args))
     end
 end
 args[0] = nil
-
-print(textutils.serialize(args))

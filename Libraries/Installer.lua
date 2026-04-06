@@ -3,7 +3,7 @@
 
 local args = {}
 for k,v in pairs(arg) do
-    print(v)
+    print(k)
     args[k] = v
 end
 args[0] = nil

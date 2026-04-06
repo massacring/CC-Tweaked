@@ -154,17 +154,24 @@ end
 
 --- Connects to my CC: Tweaked GitHub repo and updates all the files of the provided subdirectory.
 --- @param subdirectory string
-local function getGit(subdirectory)
-    local files = getContents(subdirectory)
+--- @param fn function
+--- @return any
+local function getGit(subdirectory, fn)
+    local contentData = getContents(subdirectory)
+    local errs = {}
 
-    for _, file in ipairs(files) do
-        local status, err = pcall(updateScript, file)
-        if not status then
-            print("Failed to update file: " .. (file.name or "N/A"))
-            print("Reason: " .. err)
+    if contentData.name then
+        contentData = {contentData}
+    end
+    for _, file in ipairs(contentData) do
+        if file.type and file.name and file.download_url then
+            local status, err = pcall(fn, file)
+            if not status then
+                errs[file.name] = err
+            end
         end
     end
-    print("Done!")
+    return errs
 end
 
 local function install()
@@ -173,24 +180,27 @@ local function install()
     local counter = 0
     for k,v in pairs(args) do
         counter = counter + 1
-        if counter > 2 and k ~= 0 then
+        if counter ~= 2 and k ~= 0 then
             table.insert(arg, v)
         end
-    end
-
-    print("installing " .. arg[1])
-    local file = getContents(arg[1])
-    local status, err = pcall(downloadScript, file)
-    if not status then
-        print("Failed to download file: " .. (file.name or "N/A"))
-        print("Reason: " .. err)
-    else
-        print("Done!")
     end
 end
 
 if arg[1] == "run" then
-    install()
+    if arg[0] == "wget" then
+        install()
+    end
+    local errs = getGit(arg[2], downloadScript)
+    if errs then
+        for file, err in pairs(errs) do
+            print("Failed to update " .. file .. ": " .. err)
+        end
+    end
 elseif arg[1] == "update" then
-    getGit(arg[2])
+    local errs = getGit(arg[2], updateScript)
+    if errs then
+        for file, err in pairs(errs) do
+            print("Failed to update " .. file .. ": " .. err)
+        end
+    end
 end

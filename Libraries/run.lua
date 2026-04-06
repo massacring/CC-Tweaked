@@ -89,7 +89,7 @@ local function run(args)
         errorHandler(result)
     end
     if type(result) == "string" then
-        print("Task failed: " .. result)
+        print(result)
     end
     return result
 end

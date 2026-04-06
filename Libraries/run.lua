@@ -8,7 +8,7 @@ end
 local modem
 for _, name in ipairs(peripheral.getNames()) do
     modem = peripheral.wrap(name)
-    if modem.isWireless() then break
+    if modem.isWireless and modem.isWireless() then break
     else modem = nil end
 end
 local channel = 4200 -- Info Log channel, never replies

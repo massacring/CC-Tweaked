@@ -75,8 +75,8 @@ local function handleArguments(arg)
     return arguments
 end
 
-local function run()
-    local arguments, reason = handleArguments(arg)
+local function run(args)
+    local arguments, reason = handleArguments(args)
     if arguments == nil then
         error("Could not process arguments: " .. reason)
     end
@@ -92,7 +92,7 @@ local function run()
 end
 
 if arg[1] ~= nil then
-    run()
+    run(arg)
 end
 
 return run

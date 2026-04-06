@@ -6,7 +6,7 @@ local counter = 0
 for _,v in pairs(arg) do
     counter = counter + 1
     if counter > 2 then
-        args[counter - 2] = v
+        table.insert(args, v)
     end
 end
 args[0] = nil

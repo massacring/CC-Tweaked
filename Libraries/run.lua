@@ -88,6 +88,9 @@ local function run(args)
     if not success then
         errorHandler(result)
     end
+    if type(result) == "string" then
+        print("Task failed: " .. result)
+    end
     return result
 end
 

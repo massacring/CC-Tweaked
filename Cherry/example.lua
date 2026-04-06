@@ -5,8 +5,6 @@ local FIXED = Cherry.FIXED
 local GROW = Cherry.GROW
 local FIT = Cherry.FIT
 
--- this is a test
-
 local UnitTest = require("CherryTests")
 
 local monitor = peripheral.find("monitor")

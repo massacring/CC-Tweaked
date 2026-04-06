@@ -7,8 +7,7 @@ local counter = 0
 for k,v in pairs(args) do
     counter = counter + 1
     if counter > 2 and k ~= 0 then
+        print(textutils.serialize(arg))
         table.insert(arg, v)
     end
 end
-
-print(textutils.serialize(arg))

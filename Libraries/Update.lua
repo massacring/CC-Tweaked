@@ -1,7 +1,5 @@
--- Myers tutorial:
--- https://docs.moonbitlang.com/en/latest/example/myers-diff/myers-diff2.html
-
 local GIT_API = "https://api.github.com/repos/massacring/CC-Tweaked/"
+local GIT_RAW = "https://raw.githubusercontent.com/massacring/CC-Tweaked/main/"
 
 --- Uses the Git API to fetch the contents of the provided subdirectory.
 --- @param subdirectory string

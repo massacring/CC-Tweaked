@@ -4,10 +4,10 @@
 -- Updating requires the installer to be downloaded first.
 -- Usage:
 -- To install :
---   first run  : wget https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Installer.lua Installer.lua
+--   first run  : wget https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Libraries/Installer.lua Installer.lua
 --   then run   : Installer.lua run <filepath>
 -- To update  : Installer update <subdirectory>
--- Optional install (cannot update) : wget run https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Installer.lua <filepath>
+-- Optional install (cannot update) : wget run https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Libraries/Installer.lua <filepath>
 
 local GIT_API = "https://api.github.com/repos/massacring/CC-Tweaked/"
 

@@ -1802,18 +1802,26 @@ function Navigator:staircase(properties)
     return true
 end
 
-local myNav
-
-local function errData()
+--- Gets error data for the current state of the navigator, including computer id, label, and coordinates.
+--- @return string
+function Navigator:errData()
     local id = os.getComputerID() or "N/A"
     local label = os.getComputerLabel() or "Unlabeled"
 
-    local currentCoords = myNav:getCoords():key() or "N/A"
+    local currentCoords = self:getCoords():key() or "N/A"
 
     return ("%s|%s@(%s)"):format(id, label, currentCoords)
 end
 
+--- Factory method to create a navigator with the provided arguments.
+--- @param direction string
+--- @param x number|nil
+--- @param y number|nil
+--- @param z number|nil
+--- @param useCoords boolean|nil
+--- @return table
 local function createNavigator(direction, x, y, z, useCoords)
+    local myNav
     if x == nil or y == nil or z == nil then
         print("Missing coordinates.")
         useCoords = false
@@ -1827,6 +1835,7 @@ local function createNavigator(direction, x, y, z, useCoords)
     else
         myNav = Navigator(turtle, direction)
     end
+    return myNav
 end
 
 local function getFilter(arguments)
@@ -1844,9 +1853,13 @@ local function getFilter(arguments)
     return filter
 end
 
+--- Sets up the navigator and runs methods based on arguments.
+--- Returns a Navigator upon success, or a string reason why it failed.
+--- @param arguments any
+--- @return table|string
 local function setup(arguments)
     if arguments == nil then
-        return false, "Invalid arguments."
+        return "Invalid arguments."
     end
 
     if arguments.h or arguments.help then
@@ -1965,8 +1978,9 @@ local function setup(arguments)
         }
     end
 
+    local myNav = {}
     if properties ~= nil then
-        createNavigator(direction, x, y, z, useCoords)
+        myNav = createNavigator(direction, x, y, z, useCoords)
         local success, message
         if arguments.v or arguments.vein then
             success, message = myNav:vein(properties)
@@ -1978,11 +1992,11 @@ local function setup(arguments)
             success, message = myNav:staircase(properties)
         end
         if not success then
-            return false, "Failed to run: " .. message
+            return "Failed to run: " .. message
         end
     end
 
-    return true
+    return myNav
 end
 
-return { Navigator = Navigator, Vector3 = Vector3, Stack = Stack, errData = errData, setup = setup }
+return { Navigator = Navigator, Vector3 = Vector3, Stack = Stack, setup = setup }

@@ -1,8 +1,7 @@
 --- Modify "Navigator" to any file that returns a setup function and errData string.
 local setup = require("Navigator").setup
-local errData = require("Navigator").errData
 
-if type(setup) ~= "function" or type(errData) ~= "function" then
+if type(setup) ~= "function" then
     error("Required file does not return correct data.")
 end
 
@@ -26,7 +25,7 @@ local function errorHandler(err)
 
     local time = string.format("%02d:%02d:%02d UTC", hour, minute, second)
 
-    local sosMessage = string.format("[%s] - %s: Halting process due to fatal error.", time, errData())
+    local sosMessage = string.format("[%s] Halting process due to fatal error.", time)
 
     while true do
         rednet.broadcast(sosMessage)
@@ -76,15 +75,24 @@ local function handleArguments(arg)
     return arguments
 end
 
-local arguments, reason = handleArguments(arg)
-if arguments == nil then
-    error("Could not process arguments: " .. reason)
-end
-if next(arguments) == nil then
-    arguments["h"] = true
+local function run()
+    local arguments, reason = handleArguments(arg)
+    if arguments == nil then
+        error("Could not process arguments: " .. reason)
+    end
+    if next(arguments) == nil then
+        arguments["h"] = true
+    end
+
+    local success, result = pcall(setup, arguments)
+    if not success then
+        errorHandler(result)
+    end
+    return result
 end
 
-local _, success, message = xpcall(setup, errorHandler, arguments)
-if not success then
-    print(message)
+if arg[1] ~= nil then
+    run()
 end
+
+return run

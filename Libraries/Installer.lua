@@ -3,10 +3,10 @@
 
 local args = {}
 local counter = 0
-for k,v in pairs(arg) do
+for _,v in pairs(arg) do
     counter = counter + 1
     if counter > 2 then
-        args[k] = v
+        args[counter - 2] = v
     end
 end
 args[0] = nil

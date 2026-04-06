@@ -1,3 +1,14 @@
+-- Can be used in computer or turtle terminal to install the
+-- latest version of the script, or update an existing installation
+-- by fetching the latest files from the GitHub repository.
+-- Updating requires the installer to be downloaded first.
+-- Usage:
+-- To install :
+--   first run  : wget https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Installer.lua Installer.lua
+--   then run   : Installer.lua run <filepath>
+-- To update  : Installer update <subdirectory>
+-- Optional install (cannot update) : wget run https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Installer.lua <filepath>
+
 local GIT_API = "https://api.github.com/repos/massacring/CC-Tweaked/"
 
 --- Uses the Git API to fetch the contents of the provided subdirectory.

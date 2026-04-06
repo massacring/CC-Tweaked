@@ -1534,8 +1534,6 @@ function Navigator:staircase(properties)
         filter = nil, -- nil/table
     }})
 
-    print("Digging staricase.")
-
     local depth = properties.depth
     local size = properties.size
     local direction = properties.direction
@@ -1784,6 +1782,8 @@ function Navigator:staircase(properties)
         end
         return true
     end
+
+    print("Digging staricase.")
 
     do
         local success, message = digStaircase()

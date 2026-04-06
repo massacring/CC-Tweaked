@@ -1978,9 +1978,8 @@ local function setup(arguments)
         }
     end
 
-    local myNav = {}
+    local myNav = createNavigator(direction, x, y, z, useCoords)
     if properties ~= nil then
-        myNav = createNavigator(direction, x, y, z, useCoords)
         local success, message
         if arguments.v or arguments.vein then
             success, message = myNav:vein(properties)

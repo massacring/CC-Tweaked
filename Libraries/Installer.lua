@@ -1,7 +1,6 @@
 -- Meant to be run with wget in a computer or turtle terminal, not installed.
 -- Usage: wget run https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Libraries/Installer.lua <args>
 
-print(textutils.serialize(arg))
 local args = arg
 local arg = {}
 local counter = 0
@@ -12,4 +11,3 @@ for k,v in pairs(args) do
     end
 end
 
-print(textutils.serialize(arg))

@@ -2,9 +2,12 @@
 -- Usage: wget run https://raw.githubusercontent.com/massacring/CC-Tweaked/main/Libraries/Installer.lua <args>
 
 local args = {}
+local counter = 0
 for k,v in pairs(arg) do
-    print(k)
-    args[k] = v
+    counter = counter + 1
+    if counter > 2 then
+        args[k] = v
+    end
 end
 args[0] = nil
 

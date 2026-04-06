@@ -3,10 +3,11 @@
 
 local args = {}
 local counter = 0
-for _,v in pairs(arg) do
+for k,v in pairs(arg) do
     counter = counter + 1
-    if counter > 2 then
+    if counter > 2 and k ~= 0 then
         table.insert(args, v)
     end
 end
-args[0] = nil
+
+print(textutils.serialize(args))

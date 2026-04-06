@@ -120,6 +120,7 @@ Navigator.direction = nil
 Navigator.coords = nil
 Navigator.turtle = nil
 Navigator.isMining = false
+Navigator.isCrafting = false
 
 Navigator.hasGPS = gps.locate() ~= nil
 
@@ -166,6 +167,7 @@ function Navigator:new(turtle, direction, x, y, z)
     local right = self:getEquipped("right")
 
     self.isMining = (left and left.name == "minecraft:diamond_pickaxe") or (right and right.name == "minecraft:diamond_pickaxe")
+    self.isCrafting = (left and left.name == "minecraft:crafting_table") or (right and right.name == "minecraft:crafting_table")
 end
 
 --- Returns a bool whether the turtle has an item equipped on the provided side.

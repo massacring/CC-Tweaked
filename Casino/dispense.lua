@@ -1,3 +1,5 @@
+os.pullEvent = os.pullEventRaw
+
 local modem = peripheral.find("modem")
 
 if modem == nil then

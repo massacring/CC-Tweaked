@@ -1,14 +1,8 @@
 --- VARIABLES ---
 local Commons = require("CasinoCommons")
 
-local Ball = {}
-local Button = {}
-
-local monitor = peripheral.find("monitor")
-local speaker = peripheral.find("speaker")
-
--- Declares my own colors
-local m_colors = {
+-- Declares my own colours
+local m_colours = {
     white = colors.white,
     black = colors.black,
     gray = colors.gray,
@@ -27,119 +21,177 @@ local m_colors = {
     lightGold = colors.blue
 }
 
-monitor.setBackgroundColor(m_colors.black)
-monitor.clear()
-local window = window.create(monitor, 1, 1, 80, 38)
-local gameSpeed = 0.05
-local maxBalls = 5
-local width, height = window.getSize()
-local defaultBackgroundColor = m_colors.lightGray
-local defaultTextColor = m_colors.white
-local pinColor = m_colors.white
-local shadowColor = m_colors.gray
-local ballColor = m_colors.darkGray
-local scoreboardColor = m_colors.purple
-local scoreboardTitleColor = m_colors.darkGray
+local colours = {
+    creditTextColour = m_colours.white,
+    creditBackgroundColour = m_colours.red,
+    scoreTitleTextColour = m_colours.white,
+    scoreTitleBackgroundColour = m_colours.darkGray,
+    scoreValueTextColour = m_colours.white,
+    scoreValueBackgroundColour = m_colours.purple
+}
+
+local maxBalls = 3
+local defaultBackgroundColour = m_colours.lightGray
+local defaultTextColour = m_colours.white
+local pinColour = m_colours.white
+local shadowColour = m_colours.gray
+local ballColour = m_colours.darkGray
 local pinAreas = {}
 local balls = {}
 local cashoutButton = {}
+local startButton = {}
 
-local gameRunning = true
-
--- key (x) = value ({key (y) = value (color)})
-local backgroundColorMap = {}
-local foregroundColorMap = {}
+-- key (x) = value ({key (y) = value (colour)})
+local backgroundColourMap = {}
+local foregroundColourMap = {}
 
 local goals = {
-    l_green = {startPos = 2, value = 33, primaryColor = m_colors.lime, secondaryColor = m_colors.green},
-    l_lightYellow = {startPos = 8, value = 11, primaryColor = m_colors.lightYellow, secondaryColor = m_colors.yellow},
-    l_yellow = {startPos = 14, value = 4, primaryColor = m_colors.yellow, secondaryColor = m_colors.lightYellow},
-    l_orange = {startPos = 20, value = 2, primaryColor = m_colors.orange, secondaryColor = m_colors.darkOrange},
-    l_darkOrange = {startPos = 26, value = 1.5, primaryColor = m_colors.darkOrange, secondaryColor = m_colors.orange},
-    l_red = {startPos = 32, value = 0.6, primaryColor = m_colors.red, secondaryColor = m_colors.darkRed},
-    c_darkRed = {startPos = 38, value = 0.3, primaryColor = m_colors.darkRed, secondaryColor = m_colors.red},
-    r_red = {startPos = 44, value = 0.6, primaryColor = m_colors.red, secondaryColor = m_colors.darkRed},
-    r_darkOrange = {startPos = 50, value = 1.5, primaryColor = m_colors.darkOrange, secondaryColor = m_colors.orange},
-    r_orange = {startPos = 56, value = 2, primaryColor = m_colors.orange, secondaryColor = m_colors.darkOrange},
-    r_yellow = {startPos = 62, value = 4, primaryColor = m_colors.yellow, secondaryColor = m_colors.lightYellow},
-    r_lightYellow = {startPos = 68, value = 11, primaryColor = m_colors.lightYellow, secondaryColor = m_colors.yellow},
-    r_green = {startPos = 74, value = 33, primaryColor = m_colors.lime, secondaryColor = m_colors.green},
+    l_green = {startPos = 2, value = 33, primaryColour = m_colours.lime, secondaryColour = m_colours.green},
+    l_lightYellow = {startPos = 8, value = 11, primaryColour = m_colours.lightYellow, secondaryColour = m_colours.yellow},
+    l_yellow = {startPos = 14, value = 4, primaryColour = m_colours.yellow, secondaryColour = m_colours.lightYellow},
+    l_orange = {startPos = 20, value = 2, primaryColour = m_colours.orange, secondaryColour = m_colours.darkOrange},
+    l_darkOrange = {startPos = 26, value = 1.5, primaryColour = m_colours.darkOrange, secondaryColour = m_colours.orange},
+    l_red = {startPos = 32, value = 0.6, primaryColour = m_colours.red, secondaryColour = m_colours.darkRed},
+    c_darkRed = {startPos = 38, value = 0.3, primaryColour = m_colours.darkRed, secondaryColour = m_colours.red},
+    r_red = {startPos = 44, value = 0.6, primaryColour = m_colours.red, secondaryColour = m_colours.darkRed},
+    r_darkOrange = {startPos = 50, value = 1.5, primaryColour = m_colours.darkOrange, secondaryColour = m_colours.orange},
+    r_orange = {startPos = 56, value = 2, primaryColour = m_colours.orange, secondaryColour = m_colours.darkOrange},
+    r_yellow = {startPos = 62, value = 4, primaryColour = m_colours.yellow, secondaryColour = m_colours.lightYellow},
+    r_lightYellow = {startPos = 68, value = 11, primaryColour = m_colours.lightYellow, secondaryColour = m_colours.yellow},
+    r_green = {startPos = 74, value = 33, primaryColour = m_colours.lime, secondaryColour = m_colours.green},
 }
 
-local function clear()
-    window.setBackgroundColor(defaultBackgroundColor)
-    window.setTextColor(defaultTextColor)
-    window.clear()
-    window.setCursorPos(1,1)
+local EndGame
+local StartGame
+
+--- Plays the pin ding sound.
+--- @param speaker table Represents the speaker to play the sound with.
+local function playPinDing(speaker, direction)
+    local leftPitches = {0, 12, 24}
+    local rightPitches = {6, 18}
+    local pitch = (direction == "right") and rightPitches[math.random(#rightPitches)] or leftPitches[math.random(#leftPitches)]
+    speaker.playNote("pling", 1, pitch)
 end
 
--- Changes the default palette
-local function setPalatte()
-    window.setPaletteColor(colors.orange, 0xDD9D54) -- new orange
-    window.setPaletteColor(colors.magenta, 0xD98752) -- secondare orange
-    window.setPaletteColor(colors.yellow, 0xECDC5B) -- new yellow
-    window.setPaletteColor(colors.lightBlue, 0xE3EA5B) -- secondary yellow
-    window.setPaletteColor(colors.lime, 0xA0CA55) -- new lime
-    window.setPaletteColor(colors.pink, 0xB73535) -- secondary red
-    window.setPaletteColor(colors.brown, 0x4C4C4C) -- dark (old) gray
-    window.setPaletteColor(colors.gray, 0x727272) -- new gray
-    window.setPaletteColor(colors.cyan, 0xE1B156) -- dark gold
-    window.setPaletteColor(colors.blue, 0xE8C958) -- light gold
+--- Plays the end ding sound.
+--- @param speaker table Represents the speaker to play the sound with.
+local function playEndDing(speaker)
+    speaker.playNote("pling", 1, 10)
+    sleep(0.05)
+    speaker.playNote("pling", 1, 11)
+    sleep(0.05)
+    speaker.playNote("pling", 1, 13)
 end
 
-local function drawDot(x,y,color, isForeground)
-    window.setCursorPos(x,y)
-    window.setBackgroundColor(color)
-    window.write(" ")
+--- Changes the default palette
+--- @param screen table Represents the screen to draw on.
+local function setPalette(screen)
+    screen.setPaletteColour(colors.orange, 0xDD9D54) -- new orange
+    screen.setPaletteColour(colors.magenta, 0xD98752) -- secondare orange
+    screen.setPaletteColour(colors.yellow, 0xECDC5B) -- new yellow
+    screen.setPaletteColour(colors.lightBlue, 0xE3EA5B) -- secondary yellow
+    screen.setPaletteColour(colors.lime, 0xA0CA55) -- new lime
+    screen.setPaletteColour(colors.pink, 0xB73535) -- secondary red
+    screen.setPaletteColour(colors.brown, 0x4C4C4C) -- dark (old) gray
+    screen.setPaletteColour(colors.gray, 0x727272) -- new gray
+    screen.setPaletteColour(colors.cyan, 0xE1B156) -- dark gold
+    screen.setPaletteColour(colors.blue, 0xE8C958) -- light gold
+end
+
+--- Sets the background of the game.
+--- @param screen table Represents the screen to draw on.
+local function setBackground(screen)
+    local oldTerm = term.redirect(screen)
+    term.setBackgroundColour(defaultBackgroundColour)
+    term.setTextColour(defaultTextColour)
+    term.clear()
+    term.setCursorPos(1,1)
+    term.redirect(oldTerm)
+end
+
+--- Draws a dot to the screen and updates the relative colour map.
+--- @param screen table Represents the screen to draw on.
+--- @param x number Represents the X coordinate to start drawing at.
+--- @param y number Represents the Y coordinate to start drawing at.
+--- @param colour number Represents the colour of the dot.
+--- @param isForeground boolean|nil Whether the dot is in the foreground or background.
+local function drawDot(screen, x, y, colour, isForeground)
+    local oldTerm = term.redirect(screen)
+    term.setCursorPos(x,y)
+    term.setBackgroundColour(colour)
+    term.write(" ")
     if isForeground then
-        foregroundColorMap[x] = foregroundColorMap[x] or {}
-        foregroundColorMap[x][y] = color
+        foregroundColourMap[x] = foregroundColourMap[x] or {}
+        foregroundColourMap[x][y] = colour
     else
-        backgroundColorMap[x] = backgroundColorMap[x] or {}
-        backgroundColorMap[x][y] = color
+        backgroundColourMap[x] = backgroundColourMap[x] or {}
+        backgroundColourMap[x][y] = colour
     end
-    
+    term.redirect(oldTerm)
 end
 
-local function drawSquare(x, y, span, length, color, isForeground)
-    window.setCursorPos(x,y)
-    window.setBackgroundColor(color)
+--- Draws a square to the screen and updates the relative colour map.
+--- @param screen table Represents the screen to draw on.
+--- @param x number Represents the X coordinate to start drawing at.
+--- @param y number Represents the Y coordinate to start drawing at.
+--- @param span number The span of the square.
+--- @param length number The length of the square.
+--- @param colour number Represents the colour of the square.
+--- @param isForeground boolean|nil Whether the square is in the foreground or background.
+local function drawSquare(screen, x, y, span, length, colour, isForeground)
+    local oldTerm = term.redirect(screen)
+    term.setCursorPos(x,y)
+    term.setBackgroundColour(colour)
     for row = 1, length, 1 do
-        window.setCursorPos(x,y+row-1)
-        window.write(string.rep(" ", span))
+        term.setCursorPos(x,y+row-1)
+        term.write(string.rep(" ", span))
         for column = 1, span, 1 do
             local storeX = x+column-1
             local storeY = y+row-1
             if isForeground then
-                foregroundColorMap[storeX] = foregroundColorMap[storeX] or {}
-                foregroundColorMap[storeX][storeY] = color
+                foregroundColourMap[storeX] = foregroundColourMap[storeX] or {}
+                foregroundColourMap[storeX][storeY] = colour
             else
-                backgroundColorMap[storeX] = backgroundColorMap[storeX] or {}
-                backgroundColorMap[storeX][storeY] = color
+                backgroundColourMap[storeX] = backgroundColourMap[storeX] or {}
+                backgroundColourMap[storeX][storeY] = colour
             end
         end
     end
+    term.redirect(oldTerm)
 end
 
-local function write(text, x, y, textColor, backGroundColor, isForeground)
-    backGroundColor = backGroundColor or defaultBackgroundColor
-    textColor = textColor or defaultTextColor
-    window.setCursorPos(x,y)
-    window.setBackgroundColor(backGroundColor)
-    window.setTextColor(textColor)
-    window.write(text)
+--- Writes to the screen and updates the relative colour map.
+--- @param screen table Represents the screen to draw on.
+--- @param text string The text to write.
+--- @param x number Represents the X coordinate to start drawing at.
+--- @param y number Represents the Y coordinate to start drawing at.
+--- @param textColour number Represents the colour of the text.
+--- @param backGroundColour number Represents the background colour of the text.
+--- @param isForeground boolean|nil Whether the text is in the foreground or background.
+local function write(screen, text, x, y, textColour, backGroundColour, isForeground)
+    local oldTerm = term.redirect(screen)
+    backGroundColour = backGroundColour or defaultBackgroundColour
+    textColour = textColour or defaultTextColour
+    term.setCursorPos(x,y)
+    term.setBackgroundColour(backGroundColour)
+    term.setTextColour(textColour)
+    term.write(text)
     for column = 1, string.len(text), 1 do
         local storeX = x+column-1
         if isForeground then
-            foregroundColorMap[storeX] = foregroundColorMap[storeX] or {}
-            foregroundColorMap[storeX][y] = backGroundColor
+            foregroundColourMap[storeX] = foregroundColourMap[storeX] or {}
+            foregroundColourMap[storeX][y] = backGroundColour
         else
-            backgroundColorMap[storeX] = backgroundColorMap[storeX] or {}
-            backgroundColorMap[storeX][y] = backGroundColor
+            backgroundColourMap[storeX] = backgroundColourMap[storeX] or {}
+            backgroundColourMap[storeX][y] = backGroundColour
         end
     end
+    term.redirect(oldTerm)
 end
 
+--- Generates a Plinko pin.
+--- @param x number Represents the X coordinate of the pin.
+--- @param y number Represents the Y coordinate of the pin.
 local function generatePin(x, y)
     local area = {}
     for column = 1, 2, 1 do
@@ -148,9 +200,10 @@ local function generatePin(x, y)
     table.insert(pinAreas, area)
 end
 
-local function generateAllPins()
-    local midPoint = width / 2
-
+--- Generates all Plinko pins.
+--- @param midPoint number Represents the midpoint to generate pins from.
+local function generateAllPins(midPoint)
+    midPoint = math.floor(midPoint)
     for row = 1,34,3 do
         if row == 1 then goto continue end
         for column = 1,(row/3)+1,1 do
@@ -162,144 +215,127 @@ local function generateAllPins()
     end
 end
 
-local function drawAllPins()
+--- Draws all pins to the screen.
+--- @param screen table Represents the screen to draw on.
+local function drawAllPins(screen)
     for _, area in pairs(pinAreas) do
         for _, coord in pairs(area) do
-            drawDot(coord.x+1, coord.y+1, shadowColor)
-            drawDot(coord.x+1, coord.y+2, shadowColor)
-            drawDot(coord.x, coord.y, pinColor, true)
-            drawDot(coord.x, coord.y+1, pinColor, true)
+            drawDot(screen, coord.x+1, coord.y+1, shadowColour)
+            drawDot(screen, coord.x+1, coord.y+2, shadowColour)
+            drawDot(screen, coord.x, coord.y, pinColour, true)
+            drawDot(screen, coord.x, coord.y+1, pinColour, true)
         end
     end
 end
 
-local function drawGoal(x, y, text, primaryColor, secondaryColor, textColor)
-    drawSquare(x, y, 6, 3, primaryColor, true)
-    drawSquare(x+1, y+1, 4, 1, secondaryColor, true)
-    window.setCursorPos(x+1, y+1)
-    window.setTextColor(textColor)
-    window.write(text)
+--- Draws a Plinko goal.
+--- @param screen table Represents the screen to draw on.
+--- @param x number Represents the X coordinate to start drawing at.
+--- @param y number Represents the Y coordinate to start drawing at.
+--- @param text string The text to write.
+--- @param primaryColour number Represents the primary colour of the goal.
+--- @param secondaryColour number Represents the secondary colour of the goal.
+--- @param textColour number Represents the colour of the text.
+local function drawGoal(screen, x, y, text, primaryColour, secondaryColour, textColour)
+    local oldTerm = term.redirect(screen)
+    drawSquare(screen, x, y, 6, 3, primaryColour, true)
+    drawSquare(screen, x+1, y+1, 4, 1, secondaryColour, true)
+    term.setCursorPos(x+1, y+1)
+    term.setTextColour(textColour)
+    term.write(text)
+    term.redirect(oldTerm)
 end
 
-local function drawAllGoals()
+--- Draws all Plinko goals.
+--- @param screen table Represents the screen to draw on.
+local function drawAllGoals(screen)
+    local _, height = screen.getSize()
     local y = height-3
-    local textColor = m_colors.darkGray
+    local textColour = m_colours.darkGray
     for _, goal in pairs(goals) do
         local text = tostring(goal.value)
-        drawGoal(goal.startPos, y, " "..text, goal.primaryColor, goal.secondaryColor, textColor)
+        drawGoal(screen, goal.startPos, y, " "..text, goal.primaryColour, goal.secondaryColour, textColour)
     end
 end
 
-local function drawScoreboard()
-    local scoreTitle = "Score:"
-    local scoreText = tostring(Commons.Score:getScore())
-    local scoreTextLen = string.len(scoreText) + 2
-    if scoreTextLen < 9 then scoreTextLen = 9 end
-    local startX = width - 2 - scoreTextLen
-
-    window.setTextColor(m_colors.white)
-    drawSquare(startX+1, 4, scoreTextLen, 3, shadowColor)
-    drawSquare(startX, 3, scoreTextLen, 3, scoreboardColor, true)
-    window.setCursorPos(startX+1, 4)
-    window.write(scoreText)
-    drawSquare(startX+1, 2, 6, 1, scoreboardTitleColor, true)
-    window.setCursorPos(startX+1, 2)
-    window.write(scoreTitle)
-end
-
-local function debugColorMaps()
-    clear()
-    for column, rows in pairs(backgroundColorMap) do
+--- Debugs colour maps.
+--- @param screen table Represents the screen to draw on.
+local function debugColourMaps(screen)
+    setBackground(screen)
+    local oldTerm = term.redirect(screen)
+    for column, rows in pairs(backgroundColourMap) do
         for row, _ in pairs(rows) do
-            window.setCursorPos(column,row)
-            window.setBackgroundColor(m_colors.lime)
-            window.write(" ")
+            term.setCursorPos(column,row)
+            term.setBackgroundColour(m_colours.lime)
+            term.write(" ")
         end
     end
-    for column, rows in pairs(foregroundColorMap) do
+    for column, rows in pairs(foregroundColourMap) do
         for row, _ in pairs(rows) do
-            window.setCursorPos(column,row)
-            window.setBackgroundColor(m_colors.purple)
-            window.write(" ")
+            term.setCursorPos(column,row)
+            term.setBackgroundColour(m_colours.purple)
+            term.write(" ")
         end
     end
+    term.redirect(oldTerm)
 end
 
-local function drawScreen()
-    clear()
-    drawAllPins()
-    drawAllGoals()
-    drawScoreboard()
-    drawSquare(cashoutButton.x+1, cashoutButton.y+1, cashoutButton.width, cashoutButton.height, shadowColor)
-    cashoutButton:displayOnScreen(drawSquare, write)
-    --debugColorMaps()
-end
-
-local function spawnBall()
-    local ball = Ball.new(math.random(37, 45), 0, ballColor, foregroundColorMap, backgroundColorMap)
+--- Spawns a Plinko Ball.
+--- @param screen table Represents the screen.
+local function spawnBall(screen)
+    local width, _ = screen.getSize()
+    local ball = Commons.Ball.new(math.random(width / 2 - 4, width / 2 + 5), 0, ballColour, foregroundColourMap, backgroundColourMap)
     table.insert(balls, ball)
 end
 
-local function endRun()
-    clear()
-    gameRunning = false
-end
-
-local function createCashoutButton()
+--- Creates the cashout button.
+--- @param screen table Represents the screen to draw on.
+local function createCashoutButton(screen)
     local label = "Cash out!"
     local labelLength = string.len(label)
+    local width, _ = screen.getSize()
     local x = width - labelLength - 3
     local y = 8
     local span = labelLength
     local length = 1
     local labelPad = 0
-    local backgroundColorNormal = m_colors.darkGold
-    local borderColorNormal = m_colors.orange
-    local textColorNormal = m_colors.white
-    cashoutButton = Button.new(label, endRun, x, y, span, length, labelPad, backgroundColorNormal, borderColorNormal, textColorNormal)
+    local backgroundColourNormal = m_colours.darkGold
+    local borderColourNormal = m_colours.orange
+    local textColourNormal = m_colours.white
+    cashoutButton = Commons.Buttons:addButton(label, EndGame, x, y, span, length, labelPad, backgroundColourNormal, borderColourNormal, textColourNormal)
 end
 
-local function init()
-    monitor.setTextScale(0.5)
-    setPalatte()
-    generateAllPins()
-    createCashoutButton()
-    drawScreen()
-end
-
--- Returns "right" around one in 'i' times, otherwise returns "left".
+--- Returns "right" around one in 'i' times, otherwise returns "left".
+--- @param i number Odds to get "right"
+--- @return string direction "right" or "left"
 local function calculateStep(i)
     return (math.random(i) % i == 0) and "right" or "left"
 end
 
-local function checkPinCollision(coord)
-    coord.x = coord.x or 0
-    coord.y = coord.y or 0
-    for _, area in pairs(pinAreas) do
-        for _, pinCoord in pairs(area) do
-            local result = coord.x == pinCoord.x and coord.y == pinCoord.y
-            if result then return true end
-        end
-    end
-    return false
-end
-
-local function moveHorizontally(ball, direction, velocity)
+--- Moves a ball horizontally.
+--- @param screen table Represents the screen to draw on.
+--- @param ball table The ball to move.
+--- @param direction string The direcction to move in, should be "left" or "right".
+--- @param velocity number How far to move.
+local function moveHorizontally(screen, ball, direction, velocity)
     local directionalVelocity = ((direction == "right") and 1 or -1)
     for i = 1,velocity,1 do
-        ball:move(window, 1 * directionalVelocity, 0, defaultBackgroundColor)
-        local result = ball:checkBelowBall(checkPinCollision)
+        ball:move(screen, 1 * directionalVelocity, 0, defaultBackgroundColour)
+        local result = ball:checkBelowBall(pinAreas)
         if not (result.left_collided or result.right_collided) and i ~= 1 then
-            ball:move(window, 0, 1, defaultBackgroundColor)
+            ball:move(screen, 0, 1, defaultBackgroundColour)
         end
         if i == velocity then return end
-        sleep(gameSpeed)
+        sleep(0.05)
     end
 end
 
-local function calculateGoalPos(ball)
+--- Calculates what goal the ball is in.
+--- @param ball table The ball to check.
+--- @param midPoint table Represents the midpoint to generate pins from.
+--- @return string result The name of the goal.
+local function calculateGoalPos(ball, midPoint)
     local x = ball.x
-    local midPoint = width / 2
     local difference = midPoint - x
     local result
 
@@ -327,13 +363,19 @@ local function calculateGoalPos(ball)
     return result
 end
 
-local function calculateReward(ball)
-    local goal = calculateGoalPos(ball)
+--- Calculates the reward where the ball is.
+--- @param screen table Represents the screen to draw on.
+--- @param ball table The ball to calculate for.
+local function calculateReward(screen, ball)
+    local width, height = screen.getSize()
+    local goal = calculateGoalPos(ball, width / 2)
     local multiplier = goals[goal].value
     Commons.Score:updateScore(math.ceil(Commons.Score:getScore() * multiplier))
-    drawScoreboard()
+    Commons.Score:draw(screen, 2, height/2 - 2, false, colours)
 end
 
+--- Counts the Balls on screen.
+--- @return number count Then number of balls present.
 local function countBalls()
     local count = 0
     for _, ball in pairs(balls) do
@@ -342,214 +384,123 @@ local function countBalls()
     return count
 end
 
-local function playPinDing(direction)
-    local leftPitches = {0, 12, 24}
-    local rightPitches = {6, 18}
-    local pitch = (direction == "right") and rightPitches[math.random(#rightPitches)] or leftPitches[math.random(#leftPitches)]
-    speaker.playNote("pling", 1, pitch)
-end
-
-local function playEndDing()
-    speaker.playNote("pling", 1, 10)
-    sleep(0.05)
-    speaker.playNote("pling", 1, 11)
-    sleep(0.05)
-    speaker.playNote("pling", 1, 13)
-end
-
-local function tick()
-    while gameRunning do
-        for _, ball in pairs(balls) do
-            local result = ball:checkBelowBall(checkPinCollision)
-            if result.left_collided or result.right_collided then
-                if result.left_collided and result.right_collided then
-                    local direction = calculateStep(2)
-                    local velocity = math.random(2, 4)
-                    moveHorizontally(ball, direction, velocity)
-                    playPinDing(direction)
-                else
-                    local direction = result.left_collided and "right" or "left"
-                    local velocity = math.random(3)
-                    moveHorizontally(ball, direction, velocity)
-                    playPinDing(direction)
-                end
+--- Ticks the game.
+local function tick(screen, speaker)
+    for i, ball in pairs(balls) do
+        local result = ball:checkBelowBall(pinAreas)
+        if result.left_collided or result.right_collided then
+            if result.left_collided and result.right_collided then
+                local direction = calculateStep(2)
+                local velocity = math.random(2, 4)
+                moveHorizontally(screen, ball, direction, velocity)
+                playPinDing(speaker, direction)
             else
-                ball:move(window, 0, 1, defaultBackgroundColor)
+                local direction = result.left_collided and "right" or "left"
+                local velocity = math.random(3)
+                moveHorizontally(screen, ball, direction, velocity)
+                playPinDing(speaker, direction)
             end
-                if ball.y >= height-3 then
-                ball:move(window, 0, -1, defaultBackgroundColor)
-                calculateReward(ball)
-                ball:clear(window, defaultBackgroundColor)
-                balls[_] = nil
-                drawAllGoals()
-                playEndDing()
-            end
+        else
+            ball:move(screen, 0, 1, defaultBackgroundColour)
         end
-        sleep(gameSpeed)
-    end
-end
-
-local function events()
-    sleep(0.5)
-    while gameRunning do
-        local eventData = {os.pullEvent()}
-        local event = eventData[1]
-        if event == "key_up" and eventData[2] == keys.q then
-            return
-        elseif event == "monitor_touch" then
-            local x, y = eventData[3], eventData[4]
-            if cashoutButton:collides(x, y) then
-                cashoutButton.clickEvent()
-                return
-            else
-                local ballCount = countBalls()
-                if Commons.Score:getScore() * (0.3 ^ (ballCount+1)) < 1.0
-                then print("Out of coin!")
-                elseif (ballCount >= maxBalls)
-                then print("Too many balls!")
-                else spawnBall() end
-            end
-            sleep(0.1)
+        local _, height = screen.getSize()
+        if ball.y >= height-3 then
+            ball:move(screen, 0, -1, defaultBackgroundColour)
+            calculateReward(screen, ball)
+            ball:clear(screen, defaultBackgroundColour)
+            balls[i] = nil
+            drawAllGoals(screen)
+            playEndDing(speaker)
         end
     end
 end
 
-local function runGame()
-    parallel.waitForAny(tick, events)
+--- Called when the monitor is touched.
+--- @param x number The x coordinate touched.
+--- @param y number The y coordinate touched.
+local function monitorTouch(screen, x, y)
+    local ballCount = countBalls()
+    if Commons.Score:getScore() * (0.3 ^ (ballCount+1)) < 1.0
+    then print("Out of coin!")
+    elseif (ballCount >= maxBalls)
+    then print("Too many balls!")
+    else spawnBall(screen) end
 end
 
---- BALL ---
-
-Ball.__index = Ball
-
-function Ball.new(x, y, color, foregroundColorMap, backgroundColorMap)
-    local ball = setmetatable({}, Ball)
-
-    ball.x = x or 0
-    ball.y = y or 0
-    ball.color = color or colors.black
-    ball.foregroundColorMap = foregroundColorMap or {}
-    ball.backgroundColorMap = backgroundColorMap or {}
-    ball.prevPixels = {
-        ["1:1"] = colors.black,
-        ["1:2"] = colors.black,
-        ["2:1"] = colors.black,
-        ["2:2"] = colors.black,
-    }
-
-    return ball
+--- Draws Plinko screen.
+--- @param screen table Represents the screen to draw on.
+local function drawScreen(screen)
+    setBackground(screen)
+    drawAllPins(screen)
+    drawAllGoals(screen)
+    Commons.Credits.selectedCredit:draw(screen, 1, 1, colours)
+    local _, height = screen.getSize()
+    Commons.Score:draw(screen, 2, height/2 - 2, false, colours)
+    drawSquare(screen, cashoutButton.x+1, cashoutButton.y+1, cashoutButton.width, cashoutButton.height, shadowColour)
+    cashoutButton:displayOnScreen(screen)
+    --debugColourMaps(screen)
 end
 
-function Ball:checkBelowBall(checkPinCollision)
-    local result = {
-        left_collided = checkPinCollision({x = self.x, y = self.y+2}),
-        right_collided = checkPinCollision({x = self.x+1, y = self.y+2})
-    }
-    return result
+--- Starts the game.
+--- @param screen table Represents the screen to draw on.
+local function start(screen)
+    sleep(0.1)
+    if Commons.Credits.selectedCredit == nil then return end
+
+    StartGame()
+    startButton:disable()
+
+    local width, _ = screen.getSize()
+    generateAllPins(width / 2)
+    createCashoutButton(screen)
+    drawScreen(screen)
 end
 
-function Ball:clear(monitor, fallbackColor)
-    fallbackColor = fallbackColor or colors.black
-    for x = 1, 2, 1 do
-        local checkX = self.x + x - 1
-        local backgroundColumns = self.backgroundColorMap[checkX]
-        local foregroundColumns = self.foregroundColorMap[checkX]
-        for y = 1, 2, 1 do
-            local checkY  =self.y + y - 1
-            monitor.setBackgroundColor(fallbackColor)
-            if backgroundColumns ~= nil and backgroundColumns[checkY] ~= nil then
-                monitor.setBackgroundColor(backgroundColumns[checkY]) end
-            if foregroundColumns ~= nil and foregroundColumns[checkY] ~= nil then
-                monitor.setBackgroundColor(foregroundColumns[checkY]) end
-
-            monitor.setCursorPos(checkX, checkY)
-            monitor.write(" ")
-        end
-    end
-    self.isActive = false
-end
-
-function Ball:move(monitor, x, y, fallbackColor)
-    self:clear(monitor, fallbackColor)
-    self.x = self.x + x
-    self.y = self.y + y
-    self:displayOnScreen(monitor)
-end
-
-function Ball:displayOnScreen(monitor)
-    monitor.setCursorPos(self.x,self.y)
-    monitor.setBackgroundColor(self.color)
-    for x = 1, 2, 1 do
-        local checkX = self.x + x - 1
-        local columns = self.foregroundColorMap[checkX]
-        for y = 1, 2, 1 do
-            local checkY = self.y + y - 1
-            if columns ~= nil and columns[checkY] ~= nil then goto continue end
-            monitor.setCursorPos(checkX, checkY)
-            monitor.write(" ")
-            ::continue::
-        end
-    end
-    self.isActive = true
-end
-
-function Ball:click()
-    if self.isActive then
-        self.clickEvent()
-    end
-end
-
---- BUTTON ---
-
-Button.__index = Button
-
-function Button.new(label, clickEvent, x, y, width, height, labelPad, backgroundColorNormal, borderColor, textColorNormal)
-    local button = setmetatable({}, Button)
-    button.isActive = false
-    button.clickEvent = clickEvent or function() print("Click!") end
-    button.x = x or 1
-    button.y = y or 1
-    button.width = width or 3
-    button.height = height or 3
-    button.isPressed = false
-    button.backgroundColorCurrent = backgroundColorNormal or colors.black
-    button.backgroundColorNormal = backgroundColorNormal or colors.black
-    button.borderColor = borderColor
-    button.label = label or "Press"
-    button.labelPad = labelPad or 0
-    button.textColorCurrent = textColorNormal or colors.lightGray
-    button.textColorNormal = textColorNormal or colors.lightGray
-
-    button.width = button.width + (button.labelPad * 2)
-    button.height = button.height + (button.labelPad * 2)
-    if button.borderColor then
-        button.width = button.width + 2
-        button.height = button.height + 2
-    end
-
+--- Creates the start button.
+--- @param screen table Represents the screen to draw on.
+local function createStartButton(screen)
+    local label = "Start Game!"
+    local width, height = screen.getSize()
+    local x = math.floor(width / 2 - 1) - math.floor(#label / 2 + 1)
+    local y = math.floor(height / 2 - 1) - 1
+    local button = Commons.Buttons:addButton(label, function() start(screen) end, x, y, #label, 1, 1, m_colours.darkRed, m_colours.red, m_colours.white)
     return button
 end
 
-function Button:displayOnScreen(drawSquare, write)
-    local x_offset, y_offset = self.labelPad, self.labelPad
-
-    if self.borderColor then
-        x_offset = x_offset + 1
-        y_offset = y_offset + 1
-        drawSquare(self.x, self.y, self.width, self.height, self.borderColor, true)
+--- Draws the screen.
+--- @param screen table Represents the screen to draw on.
+local function drawStartScreen(screen)
+    setBackground(screen)
+    startButton:displayOnScreen(screen)
+    if Commons.Credits.selectedCredit ~= nil then
+        Commons.Credits.selectedCredit:draw(screen, 1, 1, colours)
     end
-
-    drawSquare(self.x+1, self.y+1, self.width-2, self.height-2, self.backgroundColorCurrent, true)
-
-    write(self.label, self.x + x_offset, self.y + y_offset, self.textColorCurrent, self.backgroundColorCurrent, true)
-
-    self.isActive = true
+    local width, _ = screen.getSize()
+    Commons.Score:draw(screen, width / 2, 3, true, colours)
 end
 
-function Button:collides(x, y)
-    return ((x >= self.x) and (x < (self.x + self.width))) and ((y >= self.y) and (y < (self.y + self.height)))
+local function redraw(screen, gameStarted)
+    setPalette(screen)
+    if not gameStarted then
+        drawStartScreen(screen)
+    else
+        drawScreen(screen)
+    end
+end
+
+--- Starts the game.
+--- @param screen table Represents the screen to draw on.
+--- @param speaker table Represents the speaker to play sounds on.
+--- @param endGame function Represents the function to end the game with.
+--- @param startGame function Represents the function to start the game with.
+local function run(screen, speaker, endGame, startGame)
+    setPalette(screen)
+    startButton = createStartButton(screen)
+    drawStartScreen(screen)
+    EndGame = endGame
+    StartGame = startGame
 end
 
 --- RETURN ---
 
-return { init = init, drawScreen = drawScreen, runGame = runGame, Button = Button, Ball = Ball }
+return { run = run, colours = colours, tick = tick, monitorTouch = monitorTouch, redraw = redraw }

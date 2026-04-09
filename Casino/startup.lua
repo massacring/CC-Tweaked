@@ -61,13 +61,8 @@ if not monitor then
     error("No Monitor Peripheral connected to turtle.")
 end
 
-do
-    local oldTerm = term.redirect(monitor)
-    for i = 0, 15 do term.setPaletteColour(2^i, term.nativePaletteColour(2^i)) end
-    term.redirect(oldTerm)
-end
-
-monitor.setBackgroundColor(colors.black)
+for i = 0, 15 do monitor.setPaletteColour(2^i, term.nativePaletteColour(2^i)) end
+monitor.setBackgroundColour(colours.black)
 monitor.clear()
 monitor.setTextScale(0.5)
 local screen = window.create(monitor, 1, 1, monitor.getSize())
@@ -83,19 +78,26 @@ local Games = {
     "Plinko"
 }
 
+local function drawButtons()
+    for _, button in ipairs(gameSelectButtons) do
+        button:displayOnScreen(screen)
+    end
+end
+
 --- RUN GAME ---
 
 local function tick()
     while true do
         if (not gameStarted) then
             Commons.STD.countCredits(screen, storage, input, output, Game.colours)
+        elseif Game and Game.tick then
+            Game.tick(screen, speaker)
         end
         sleep(0.05)
     end
 end
 
 local function events()
-    sleep(0.5)
     while true do
         local eventData = {os.pullEvent()}
         local event = eventData[1]
@@ -104,30 +106,53 @@ local function events()
             for _, button in ipairs(Commons.Buttons.allButtons) do
                 if button:collides(x, y) then
                     button.clickEvent()
+                    sleep(0.05)
+                    goto continue
                 end
             end
-            sleep(0.1)
+            if Game and Game.monitorTouch then
+                Game.monitorTouch(screen, x, y)
+            end
+            sleep(0.05)
         elseif event == "redstone" then
             repeat
                 monitor = peripheral.find("monitor")
                 sleep(0.5)
             until monitor
+            for i = 0, 15 do monitor.setPaletteColour(2^i, term.nativePaletteColour(2^i)) end
+            monitor.setBackgroundColour(colours.black)
+            monitor.clear()
+            monitor.setTextScale(0.5)
+            screen = window.create(monitor, 1, 1, monitor.getSize())
+            width, height = screen.getSize()
+
+            if Game then
+                Game.redraw(screen, gameStarted)
+            else
+                drawButtons()
+            end
         end
+        ::continue::
     end
 end
 
+local function StartGame()
+    gameStarted = true
+end
+
 local function EndGame()
-    Commons.STD.countScore(storage, intermediaryStorage, output, printer)
+    Commons.STD.countScore(storage, intermediaryStorage, output, printer, turtleName)
+    sleep(3)
     os.reboot()
 end
 
 local function RunGame(game)
-    if not game or not game.startGame or type(game.startGame) ~= "function" then
+    if not game or not game.run or type(game.run) ~= "function" or not game.redraw or type(game.redraw) ~= "function" then
         error("Tried to run invalid Game module.", 2)
     end
     Game = game
     while Game ~= nil do
-        Game.startGame(screen, speaker, EndGame)
+        Game.run(screen, speaker, EndGame, StartGame)
         parallel.waitForAny(tick, events)
     end
 end
@@ -156,12 +181,6 @@ local function createButtons()
     return buttons
 end
 
-local function drawButtons()
-    gameSelectButtons = createButtons()
-    for _, button in ipairs(gameSelectButtons) do
-        button:displayOnScreen(screen)
-    end
-end
-
+gameSelectButtons = createButtons()
 drawButtons()
 events()

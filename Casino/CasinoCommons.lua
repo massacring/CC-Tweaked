@@ -8,6 +8,7 @@ local Credits = {}
 local Images = {}
 local Hand = {}
 local Card = {}
+local Ball = {}
 --- STD ---
 do
     STD.__index = STD
@@ -155,7 +156,8 @@ do
     --- @param intermediaryStorage table Represents an intermediary inventory to be used when moving items to and from turtles.
     --- @param output table Represents a turtle that outputs the currency.
     --- @param printer table Represents a connected printer in case of IOUs.
-    function STD.countScore(storage, intermediaryStorage, output, printer)
+    --- @param turtleName string Represents the turtle to send items to when crafting.
+    function STD.countScore(storage, intermediaryStorage, output, printer, turtleName)
         if Credits.selectedCredit == nil then
             print("Tried to count score with nil selected credit.", 1)
             return
@@ -177,7 +179,7 @@ do
                 local index, count = STD.getIndex(storage, id)
                 local numToGet = math.floor(score / multiplier)
                 if (index <= 0) then
-                    local success = Credits.selectedCredit:attemptCraft(size, numToGet, turtle) or false
+                    local success = Credits.selectedCredit:attemptCraft(size, numToGet, storage, intermediaryStorage, turtleName) or false
                     if success then
                         goto continue
                     end
@@ -262,11 +264,11 @@ do
     --- @param width number The width of the button.
     --- @param height number The height of the button.
     --- @param labelPad number Whether there should be some padding outside the label of the button.
-    --- @param backgroundColorNormal number The background colour of the button.
-    --- @param borderColor number The border colour of the button.
-    --- @param textColorNormal number The text colour of the button.
+    --- @param backgroundColourNormal number The background colour of the button.
+    --- @param borderColour number The border colour of the button.
+    --- @param textColourNormal number The text colour of the button.
     --- @return table The button that was created.
-    function Button.new(label, clickEvent, x, y, width, height, labelPad, backgroundColorNormal, borderColor, textColorNormal)
+    function Button.new(label, clickEvent, x, y, width, height, labelPad, backgroundColourNormal, borderColour, textColourNormal)
         local button = setmetatable({}, Button)
         button.isActive = false
         button.clickEvent = clickEvent or function() print("Click!") end
@@ -275,17 +277,17 @@ do
         button.width = width or 3
         button.height = height or 3
         button.isPressed = false
-        button.backgroundColorCurrent = backgroundColorNormal or colors.black
-        button.backgroundColorNormal = backgroundColorNormal or colors.black
-        button.borderColor = borderColor
+        button.backgroundColourCurrent = backgroundColourNormal or colours.black
+        button.backgroundColourNormal = backgroundColourNormal or colours.black
+        button.borderColour = borderColour
         button.label = label or "Press"
         button.labelPad = labelPad or 0
-        button.textColorCurrent = textColorNormal or colors.lightGray
-        button.textColorNormal = textColorNormal or colors.lightGray
+        button.textColourCurrent = textColourNormal or colours.lightGray
+        button.textColourNormal = textColourNormal or colours.lightGray
 
         button.width = button.width + (button.labelPad * 2)
         button.height = button.height + (button.labelPad * 2)
-        if button.borderColor then
+        if button.borderColour then
             button.width = button.width + 2
             button.height = button.height + 2
         end
@@ -299,16 +301,16 @@ do
         local oldTerm = term.redirect(screen)
         local x_offset, y_offset = self.labelPad, self.labelPad
 
-        if self.borderColor then
+        if self.borderColour then
             x_offset = x_offset + 1
             y_offset = y_offset + 1
         end
 
-        paintutils.drawFilledBox(self.x, self.y, self.x + self.width - 1, self.y + self.height - 1, self.backgroundColorCurrent)
-        paintutils.drawBox(self.x, self.y, self.x + self.width - 1, self.y + self.height - 1, self.borderColor)
+        paintutils.drawFilledBox(self.x, self.y, self.x + self.width - 1, self.y + self.height - 1, self.backgroundColourCurrent)
+        paintutils.drawBox(self.x, self.y, self.x + self.width - 1, self.y + self.height - 1, self.borderColour)
 
-        term.setTextColor(self.textColorCurrent)
-        term.setBackgroundColor(self.backgroundColorCurrent)
+        term.setTextColour(self.textColourCurrent)
+        term.setBackgroundColour(self.backgroundColourCurrent)
         term.setCursorPos(self.x + x_offset, self.y + y_offset)
         term.write(self.label)
 
@@ -342,12 +344,12 @@ do
     --- @param width number The width of the button.
     --- @param height number The height of the button.
     --- @param labelPad number Whether there should be some padding outside the label of the button.
-    --- @param backgroundColorNormal number The background colour of the button.
-    --- @param borderColor number The border colour of the button.
-    --- @param textColorNormal number The text colour of the button.
+    --- @param backgroundColourNormal number The background colour of the button.
+    --- @param borderColour number The border colour of the button.
+    --- @param textColourNormal number The text colour of the button.
     --- @return table The button that was created.
-    function Buttons:addButton(label, clickEvent, x, y, width, height, labelPad, backgroundColorNormal, borderColor, textColorNormal)
-        local button = Button.new(label, clickEvent, x, y, width, height, labelPad, backgroundColorNormal, borderColor, textColorNormal)
+    function Buttons:addButton(label, clickEvent, x, y, width, height, labelPad, backgroundColourNormal, borderColour, textColourNormal)
+        local button = Button.new(label, clickEvent, x, y, width, height, labelPad, backgroundColourNormal, borderColour, textColourNormal)
         self.allButtons[#self.allButtons + 1] = button
         return button
     end
@@ -575,7 +577,7 @@ do
         local label = "Credit Type: " .. self.name
 
         term.setTextColour(colours.creditTextColour)
-        term.setBackgroundColor(colours.creditBackgroundColour)
+        term.setBackgroundColour(colours.creditBackgroundColour)
         term.setCursorPos(x, y)
         term.write(label)
 
@@ -668,15 +670,15 @@ do
         if scoreTextLen < 13 then scoreTextLen = 13 end
         if offset then x = x - math.floor(scoreTextLen / 2) end
 
-        term.setTextColor(colours.scoreTitleTextColour)
-        term.setBackgroundColor(colours.scoreTitleBackgroundColour)
+        term.setTextColour(colours.scoreTitleTextColour)
+        term.setBackgroundColour(colours.scoreTitleBackgroundColour)
         term.setCursorPos(x+1, y)
         term.write(scoreTitle)
 
         paintutils.drawFilledBox(x, y+1, x + scoreTextLen - 1, y + 2, colours.scoreValueBackgroundColour)
 
-        term.setTextColor(colours.scoreValueTextColour)
-        term.setBackgroundColor(colours.scoreValueBackgroundColour)
+        term.setTextColour(colours.scoreValueTextColour)
+        term.setBackgroundColour(colours.scoreValueBackgroundColour)
         term.setCursorPos(x+1, y+2)
         term.write(scoreText)
 
@@ -686,197 +688,197 @@ end
 --- IMAGES ---
 do
     Images.__index = Images
-    Images.num1 = paintutils.parseImage([[
-    32
-    2
-    2
-    1
-    211
-    ]])
-    Images.num2 = paintutils.parseImage([[
-    32
-    3  1
-    2
-    2
-    2111
-    ]])
-    Images.num3 = paintutils.parseImage([[
-    32
-    3  2
-    1
-    2  1
-    21
-    ]])
-    Images.num4 = paintutils.parseImage([[
-    3  2
-    3  1
+Images.num1 = paintutils.parseImage([[
+ 32
+  2
+  2
+  1
+ 211
+]])
+Images.num2 = paintutils.parseImage([[
+ 32
+3  1
+  2
+ 2
+2111
+]])
+Images.num3 = paintutils.parseImage([[
+ 32
+3  2
+  1
+2  1
+ 21
+]])
+Images.num4 = paintutils.parseImage([[
+3  2
+3  1
+2211
+   1
+   1
+]])
+Images.num5 = paintutils.parseImage([[
+3322
+2
+ 211
+   1
+211
+]])
+Images.num6 = paintutils.parseImage([[
+ 322
+3
+221
+2  1
+ 11
+]])
+Images.num7 = paintutils.parseImage([[
+3322
+   1
+  1
+ 1
+2
+]])
+Images.num8 = paintutils.parseImage([[
+ 32
+3  1
+ 21
+2  1
+ 11
+]])
+Images.num9 = paintutils.parseImage([[
+ 32
+3  1
+ 211
+   1
+211
+]])
+Images.num0 = paintutils.parseImage([[
+ 32
+3  1
+2  1
+2  1
+ 11
+]])
+Images.jack = paintutils.parseImage([[
+332
+   2
+   1
+2  1
+ 21
+]])
+Images.queen = paintutils.parseImage([[
+ 32
+3  2
+2  1
+2 1
+ 1 1
+]])
+Images.king = paintutils.parseImage([[
+3  1
+3 2
+22
+2 1
+2  1
+]])
+Images.ace = paintutils.parseImage([[
+ 32
+3  1
+2211
+2  1
+2  1
+]])
+Images.joker = paintutils.parseImage([[
+  649
+  5aa9
+    a9 9
+  a9aaaa95
+ 5aaaaaa456
+654aaaa9 4
+ 4  9999
     2211
-    1
-    1
-    ]])
-    Images.num5 = paintutils.parseImage([[
-    3322
-    2
-    211
-    1
-    211
-    ]])
-    Images.num6 = paintutils.parseImage([[
-    322
-    3
-    221
-    2  1
-    11
-    ]])
-    Images.num7 = paintutils.parseImage([[
-    3322
-    1
-    1
-    1
-    2
-    ]])
-    Images.num8 = paintutils.parseImage([[
-    32
-    3  1
-    21
-    2  1
-    11
-    ]])
-    Images.num9 = paintutils.parseImage([[
-    32
-    3  1
-    211
-    1
-    211
-    ]])
-    Images.num0 = paintutils.parseImage([[
-    32
-    3  1
-    2  1
-    2  1
-    11
-    ]])
-    Images.jack = paintutils.parseImage([[
-    332
-    2
-    1
-    2  1
-    21
-    ]])
-    Images.queen = paintutils.parseImage([[
-    32
-    3  2
-    2  1
-    2 1
-    1 1
-    ]])
-    Images.king = paintutils.parseImage([[
-    3  1
-    3 2
-    22
-    2 1
-    2  1
-    ]])
-    Images.ace = paintutils.parseImage([[
-    32
-    3  1
-    2211
-    2  1
-    2  1
-    ]])
-    Images.joker = paintutils.parseImage([[
-    649
-    5aa9
-        a9 9
-    a9aaaa95
-    5aaaaaa456
-    654aaaa9 4
-    4  9999
-        2211
-    ]])
-    Images.spade = paintutils.parseImage([[
-    2
-    231
-    23211
-    1
-    211
-    ]])
-    Images.heart = paintutils.parseImage([[
-    5 4
-    56544
-    55544
-    544
-    4
-    ]])
-    Images.club = paintutils.parseImage([[
-    222
-    23211
-    22111
-    1
-    211
-    ]])
-    Images.diamond = paintutils.parseImage([[
-    5
-    564
-    56544
-    544
-    4
-    ]])
-    Images.bust = paintutils.parseImage([[
-    32222  3     2   3222   32221
-    3     2 3     2  3    1 3  2  1
-    2     2 2     2 2          2
-    2    2  2     2  2         2
-    22222   2     1   222      2
-    2    1  2     1      1     2
-    2     1  2   1        1    1
-    2     1  2   1  2    1     1
-    21111    211    2211     211
-    ]])
-    Images.win = paintutils.parseImage([[
-    3   2   3221 3    2
-    3     2 3 2   32    2
-    2     2   2   2 2   2
-    2     1   2   2 2   1
-    2   1    2   2  2  1
-    2 2 1    1   2   2 1
-    2 2 1    1   2   1 1
-    2 1     1 1 2    11
-    2 1   2111   2    1
-    ]])
-    Images.draw = paintutils.parseImage([[
-    3222   32222     322    3   2
-    3    2  3    2   3   2  3     2
-    2     2 2     2 2     1 2     2
-    2     1 2     1 2     1 2     1
-    2     1 2    1  2222211  2   1
-    2     1 22221   2     1  2 2 1
-    2     1 2    1  2     1  2 2 1
-    2    1  2     1 2     1   2 1
-    2211   2     1 2     1   2 1
-    ]])
-    Images.lose = paintutils.parseImage([[
-    3       322     3222   32222
-    3       3   2   3    1 3     1
-    2      2     2 2       2
-    2      2     2  2      2
-    2      2     1   222   2222
-    2      2     1      1  2
-    2      2     1       1 2
-    2    1  2   1  2    1  2     1
-    22111   211    2211    22111
-    ]])
-    Images.forfeit = paintutils.parseImage([[
-    32222    322   32222   32222   32222   32222   32221
-    3     2  3   2  3    2  3    2 3     2 3  2  2 3  2  1
-    2       2     2 2     2 2      2          2       2
-    2       2     2 2     1 2      2          2       2
-    2222    2     1 2    1  2222   2222       2       2
-    2       2     1 22221   2      2          2       2
-    2       2     1 2    1  2      2          2       1
-    2        2   1  2     1 2      2     1 2  1  1    1
-    2        211   2     1  2      22111   22111    211
-    ]])
+]])
+Images.spade = paintutils.parseImage([[
+  2
+ 231
+23211
+  1
+ 211
+]])
+Images.heart = paintutils.parseImage([[
+ 5 4
+56544
+55544
+ 544
+  4
+]])
+Images.club = paintutils.parseImage([[
+ 222
+23211
+22111
+  1
+ 211
+]])
+Images.diamond = paintutils.parseImage([[
+  5
+ 564
+56544
+ 544
+  4
+]])
+Images.bust = paintutils.parseImage([[
+ 32222  3     2   3222   32221
+3     2 3     2  3    1 3  2  1
+2     2 2     2 2          2
+2    2  2     2  2         2
+22222   2     1   222      2
+2    1  2     1      1     2
+2     1  2   1        1    1
+2     1  2   1  2    1     1
+ 21111    211    2211     211
+]])
+Images.win = paintutils.parseImage([[
+ 3   2   3221 3    2
+3     2 3 2   32    2
+2     2   2   2 2   2
+2     1   2   2 2   1
+ 2   1    2   2  2  1
+ 2 2 1    1   2   2 1
+ 2 2 1    1   2   1 1
+  2 1     1 1 2    11
+  2 1   2111   2    1
+]])
+Images.draw = paintutils.parseImage([[
+ 3222   32222     322    3   2
+3    2  3    2   3   2  3     2
+2     2 2     2 2     1 2     2
+2     1 2     1 2     1 2     1
+2     1 2    1  2222211  2   1
+2     1 22221   2     1  2 2 1
+2     1 2    1  2     1  2 2 1
+2    1  2     1 2     1   2 1
+ 2211   2     1 2     1   2 1
+]])
+Images.lose = paintutils.parseImage([[
+ 3       322     3222   32222
+3       3   2   3    1 3     1
+2      2     2 2       2
+2      2     2  2      2
+2      2     1   222   2222
+2      2     1      1  2
+2      2     1       1 2
+2    1  2   1  2    1  2     1
+ 22111   211    2211    22111
+]])
+Images.forfeit = paintutils.parseImage([[
+  3222    322   32222     3222   32222   3221  32221
+ 3    2  3   2  3    2   3    2 3     2 3 2   3  2  1
+ 2      2     2 2     2  2      2         2      2
+ 2      2     2 2     1  2      2         2      2
+ 2222   2     1 2    1   2222   2222      2      2
+ 2      2     1 22221    2      2         1      2
+ 2      2     1 2    1   2      2         1      1
+ 2       2   1  2     1  2      2     1   1 1    1
+2         211   2     1 2        22111  2111    211
+]])
 
     local cardLength = 13
     local cardHeight = 13
@@ -887,32 +889,32 @@ do
     --- @param y number Represents the Y coordinate to start drawing at.
     function Images:drawJoker(screen, x, y)
         local oldTerm = term.redirect(screen)
-        local borderColor = 2
+        local borderColour = 2
         local background = 1
 
         term.setCursorPos(x+1, y)
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         term.write(string.rep(" ", cardLength))
 
         for i=1, cardHeight, 1 do
             term.setCursorPos(x, y+i)
-            term.setBackgroundColor(borderColor)
+            term.setBackgroundColour(borderColour)
             term.write(" ")
 
             term.setCursorPos(x+1, y+i)
-            term.setBackgroundColor(background)
+            term.setBackgroundColour(background)
             term.write(string.rep(" ", cardLength))
 
             term.setCursorPos(x+1+cardLength, y+i)
-            term.setBackgroundColor(borderColor)
+            term.setBackgroundColour(borderColour)
             term.write(" ")
         end
 
         term.setCursorPos(x+1, y+1+cardHeight)
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         term.write(string.rep(" ", cardLength))
 
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         for i=1,cardHeight,(cardHeight-1) do
             term.setCursorPos(x+1, y+i)
             term.write(" ")
@@ -932,7 +934,7 @@ do
     --- @param suit string Represents the suit of the card.
     function Images:drawCard(screen, x, y, num, suit)
         local oldTerm = term.redirect(screen)
-        local borderColor = 2
+        local borderColour = 2
         local numBackground = 1
         local suitBackgroundPrimary
         local suitBackgroundSecondary
@@ -957,12 +959,12 @@ do
         end
 
         term.setCursorPos(x+1, y)
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         term.write(string.rep(" ", cardLength))
 
         for i=1, cardHeight, 1 do
             term.setCursorPos(x, y+i)
-            term.setBackgroundColor(borderColor)
+            term.setBackgroundColour(borderColour)
             term.write(" ")
 
             for j=1, cardLength, 1 do
@@ -970,29 +972,29 @@ do
                 local diagonal_forward = j + i <= math.floor((cardLength + cardHeight) / 2)+1
                 local diagonal_backward = j - i >= 1
                 if (i == j) then
-                    term.setBackgroundColor(borderColor)
+                    term.setBackgroundColour(borderColour)
                 elseif (diagonal_backward) then
                     if (diagonal_forward) then
-                        term.setBackgroundColor(suitBackgroundPrimary)
+                        term.setBackgroundColour(suitBackgroundPrimary)
                     else
-                        term.setBackgroundColor(suitBackgroundSecondary)
+                        term.setBackgroundColour(suitBackgroundSecondary)
                     end
                 else
-                    term.setBackgroundColor(numBackground)
+                    term.setBackgroundColour(numBackground)
                 end
                 term.write(" ")
             end
 
             term.setCursorPos(x+1+cardLength, y+i)
-            term.setBackgroundColor(borderColor)
+            term.setBackgroundColour(borderColour)
             term.write(" ")
         end
 
         term.setCursorPos(x+1, y+1+cardHeight)
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         term.write(string.rep(" ", cardLength))
 
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         for i=1,cardHeight,(cardHeight-1) do
             term.setCursorPos(x+1, y+i)
             term.write(" ")
@@ -1011,39 +1013,39 @@ do
     --- @param y number Represents the Y coordinate to start drawing at.
     function Images:drawFaceDown(screen, x, y)
         local oldTerm = term.redirect(screen)
-        local borderColor = 1
-        local primaryColor = 32
-        local secondaryColor = 16
+        local borderColour = 1
+        local primaryColour = 32
+        local secondaryColour = 16
 
         term.setCursorPos(x+1, y)
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         term.write(string.rep(" ", cardLength))
 
         for i=1, cardHeight, 1 do
             term.setCursorPos(x, y+i)
-            term.setBackgroundColor(borderColor)
+            term.setBackgroundColour(borderColour)
             term.write(" ")
 
             for j=1, cardLength, 1 do
                 if (i + j) % 2 == 1 then
-                    term.setBackgroundColor(primaryColor)
+                    term.setBackgroundColour(primaryColour)
                 else
-                    term.setBackgroundColor(secondaryColor)
+                    term.setBackgroundColour(secondaryColour)
                 end
                 term.setCursorPos(x+j, y+i)
                 term.write(" ")
             end
 
             term.setCursorPos(x+1+cardLength, y+i)
-            term.setBackgroundColor(borderColor)
+            term.setBackgroundColour(borderColour)
             term.write(" ")
         end
 
         term.setCursorPos(x+1, y+1+cardHeight)
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         term.write(string.rep(" ", cardLength))
 
-        term.setBackgroundColor(borderColor)
+        term.setBackgroundColour(borderColour)
         for i=1,cardHeight,(cardHeight-1) do
             term.setCursorPos(x+1, y+i)
             term.write(" ")
@@ -1072,27 +1074,27 @@ do
     --- @param x number Represents the X coordinate to start drawing at.
     --- @param y number Represents the Y coordinate to start drawing at.
     --- @param image table Represents the image to draw in the box.
-    --- @param borderColor number Represents the border color of the box.
-    --- @param topBackgroundColor number Represents the top background color of the box.
-    --- @param bottomBackgroundColor number Represents the bottom background color of the box.
-    function Images:drawBox(screen, x, y, image, borderColor, topBackgroundColor, bottomBackgroundColor)
+    --- @param borderColour number Represents the border colour of the box.
+    --- @param topBackgroundColour number Represents the top background colour of the box.
+    --- @param bottomBackgroundColour number Represents the bottom background colour of the box.
+    function Images:drawBox(screen, x, y, image, borderColour, topBackgroundColour, bottomBackgroundColour)
         local oldTerm = term.redirect(screen)
-        local length = Images:getWidth(image)
-        local height = #image - 1
+        local length = Images:getWidth(image) + 3
+        local height = #image + 3
         x = x - math.floor(length/2)
         y = y - math.floor(height/2)
         for i=1,height,1 do
             if i == 1 or i == height then
-                term.setBackgroundColor(borderColor)
+                term.setBackgroundColour(borderColour)
             elseif (i > 6) then
-                term.setBackgroundColor(topBackgroundColor)
+                term.setBackgroundColour(topBackgroundColour)
             else
-                term.setBackgroundColor(bottomBackgroundColor)
+                term.setBackgroundColour(bottomBackgroundColour)
             end
             term.setCursorPos(x, y+i-1)
             term.write(string.rep(" ", length))
 
-            term.setBackgroundColor(borderColor)
+            term.setBackgroundColour(borderColour)
             term.setCursorPos(x, y+i-1)
             term.write(" ")
             term.setCursorPos(x + length, y+i-1)
@@ -1334,5 +1336,117 @@ do
         Images:drawCard(screen, x, y, self.num, self.suit)
     end
 end
+--- BALL ---
+do
+    Ball.__index = Ball
+
+    --- Ball constructor.
+    --- @param x number The X coordinate to spawn the ball at.
+    --- @param y number The Y coordinate to spawn the ball at.
+    --- @param colour number The colour of the ball.
+    --- @param foregroundColourMap table The colour map of the foreground.
+    --- @param backgroundColourMap table The colour map of the background.
+    --- @return table ball The created ball.
+    function Ball.new(x, y, colour, foregroundColourMap, backgroundColourMap)
+        local ball = setmetatable({}, Ball)
+
+        ball.x = x or 0
+        ball.y = y or 0
+        ball.colour = colour or colours.black
+        ball.foregroundColourMap = foregroundColourMap or {}
+        ball.backgroundColourMap = backgroundColourMap or {}
+        ball.prevPixels = {
+            ["1:1"] = colours.black,
+            ["1:2"] = colours.black,
+            ["2:1"] = colours.black,
+            ["2:2"] = colours.black,
+        }
+
+        return ball
+    end
+
+    --- Checks if the coordinates collide with a pin.
+    --- @param pinAreas table The pins to check against.
+    --- @param x number The x coordinate to check.
+    --- @param y number The y coordinate to check.
+    --- @return boolean collides Whether the coordinates collide with the pin.
+    local function checkPinCollision(pinAreas, x, y)
+        for _, area in pairs(pinAreas) do
+            for _, pinCoord in pairs(area) do
+                local result = x == pinCoord.x and y == pinCoord.y
+                if result then return true end
+            end
+        end
+        return false
+    end
+
+    --- Checks for collisions below the ball based on passed function.
+    --- @param pinAreas table The pins to check against.
+    --- @return table result
+    function Ball:checkBelowBall(pinAreas)
+        local result = {
+            left_collided = checkPinCollision(pinAreas, self.x, self.y+2),
+            right_collided = checkPinCollision(pinAreas, self.x+1, self.y+2)
+        }
+        return result
+    end
+
+    --- Clears the ball from the screen and replaces it with a fallbackColour.
+    --- @param screen tablelib The screen to draw to.
+    --- @param fallbackColour number The colour to replace the ball with.
+    function Ball:clear(screen, fallbackColour)
+        local oldTerm = term.redirect(screen)
+        fallbackColour = fallbackColour or colours.black
+        for x = 1, 2, 1 do
+            local checkX = self.x + x - 1
+            local backgroundColumns = self.backgroundColourMap[checkX]
+            local foregroundColumns = self.foregroundColourMap[checkX]
+            for y = 1, 2, 1 do
+                local checkY  =self.y + y - 1
+                term.setBackgroundColour(fallbackColour)
+                if backgroundColumns ~= nil and backgroundColumns[checkY] ~= nil then
+                    term.setBackgroundColour(backgroundColumns[checkY]) end
+                if foregroundColumns ~= nil and foregroundColumns[checkY] ~= nil then
+                    term.setBackgroundColour(foregroundColumns[checkY]) end
+
+                term.setCursorPos(checkX, checkY)
+                term.write(" ")
+            end
+        end
+        self.isActive = false
+        term.redirect(oldTerm)
+    end
+
+    --- Moves the ball.
+    --- @param screen tablelib The screen to draw to.
+    --- @param x number The X amount to move the ball by.
+    --- @param y number The Y amount to move the ball by.
+    --- @param fallbackColour number The colour to replace the ball with.
+    function Ball:move(screen, x, y, fallbackColour)
+        self:clear(screen, fallbackColour)
+        self.x = self.x + x
+        self.y = self.y + y
+        self:displayOnScreen(screen)
+    end
+
+    function Ball:displayOnScreen(screen)
+        local oldTerm = term.redirect(screen)
+        term.setCursorPos(self.x,self.y)
+        term.setBackgroundColour(self.colour)
+        for x = 1, 2, 1 do
+            local checkX = self.x + x - 1
+            local columns = self.foregroundColourMap[checkX]
+            for y = 1, 2, 1 do
+                local checkY = self.y + y - 1
+                if columns ~= nil and columns[checkY] ~= nil then goto continue end
+                term.setCursorPos(checkX, checkY)
+                term.write(" ")
+                ::continue::
+            end
+        end
+        self.isActive = true
+        term.redirect(oldTerm)
+    end
+end
 --- RETURN ---
-return { STD = STD, Buttons = Buttons, Credits = Credits, Score = Score, Hand = Hand, Card = Card, Images = Images }
+return { STD = STD, Buttons = Buttons, Credits = Credits, Score = Score, Hand = Hand, Card = Card, Images = Images, Ball = Ball }
